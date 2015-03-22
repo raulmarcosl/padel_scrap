@@ -7,37 +7,42 @@ module PadelScrap
     LOGIN_PATH    = BASE_ENDPOINT + '/customer/login'
     BOOKING_PATH  = BASE_ENDPOINT + '/booking/index'
 
-    def initialize(user, password, date, hour, duration, debug: false)
-      @email    = user
-      @password = password.to_s
-      @date     = date
-      @hour     = hour
-      @duration = duration
-      @debug    = debug
+    SUCCESS_TEXT = 'Enhorabuena'
+
+    def initialize(debug: false)
+      @debug = debug
 
       initialize_connection
-
-      login
-      booking(date, hour, duration)
     end
 
-    def login
-      set_headers(
-        'Accept'          => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Encoding' => 'gzip, deflate',
-        'Content-Type'    => 'application/x-www-form-urlencoded'
-      )
-      params = "Email=#{CGI.escape(@email)}&Password=#{@password}&safari="
+    def check_availability(date, hour, duration)
+      params = "date=#{CGI.escape(date)}&type=56&hour=#{hour}%3A00&duration=#{duration}"
+      response_page = post(BOOKING_PATH, params)
+
+      available = response_page.body.include?(SUCCESS_TEXT)
+      alternatives = available ? [] : alternatives(response_page)
+
+      {
+        available: available,
+        alternatives: alternatives
+      }
     end
 
-    def booking
-      params = "date=#{CGI.escape(@date)}&type=56&hour=#{CGI.escape(@hour)}&duration=#{CGI.escape(@duration)}"
-      result = post(BOOKING_PATH, params)
-      if result.include?('Enhorabuena')
-        puts 'Tienes pista!'
-      else
-        puts 'No tienes pista!'
+    private
+      def alternatives(response_page)
+        response_page.parser.css('span.alternative').map do |alternative|
+          parse_alternative_text(alternative.text)
+        end.compact
       end
-    end
+
+      def parse_alternative_text(alternative)
+        matches = /.*(\d\d:\d\d).*(\d\d:\d\d).*/.match(alternative)
+        if matches
+          {
+            start_hour: matches.captures[0],
+            end_hour: matches.captures[1]
+          }
+        end
+      end
   end
 end

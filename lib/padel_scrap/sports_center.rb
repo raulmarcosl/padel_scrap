@@ -12,15 +12,15 @@ module PadelScrap
     private
 
     def get(url, params = {})
-      @http.get(url, params).body
+      @http.get(url, params)
     end
 
     def post(url, fields)
-      @http.post(url, fields, @headers).body
+      @http.post(url, fields, @headers)
     end
 
     def put(url, fields)
-      @http.put(url, fields, @headers).body
+      @http.put(url, fields, @headers)
     end
 
     # Sets temporary HTTP headers, execute a code block
@@ -34,7 +34,7 @@ module PadelScrap
     end
 
     def set_headers(headers)
-      @headers.merge! headers
+      @headers.merge!(headers)
       @http.request_headers = @headers
     end
 
@@ -42,15 +42,15 @@ module PadelScrap
       @http.get(url).body
     end
 
-    def initialize_connection
+    def initialize_connection(headers = {})
       @http = Mechanize.new do |mechanize|
         mechanize.user_agent = WEB_USER_AGENT
         mechanize.agent.http.verify_mode = OpenSSL::SSL::VERIFY_NONE
         mechanize.log = Logger.new(STDOUT) if @debug
-        mechanize.set_proxy('localhost', 8888)
+        # mechanize.set_proxy('localhost', 8888)
       end
 
-      @headers = {}
+      @headers = headers
     end
   end
 end
